@@ -1,10 +1,5 @@
 package org.opentsdb.client;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HeaderElement;
 import org.apache.http.HeaderElementIterator;
@@ -24,6 +19,12 @@ import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 import org.opentsdb.client.response.SimpleHttpResponse;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * 
@@ -55,7 +56,7 @@ public class PoolingHttpClient {
 	private int readTimeout = DEFAULT_READ_TIMEOUT_MILLISECONDS;
 	private int waitTimeout = DEFAULT_WAIT_TIMEOUT_MILLISECONDS;
 
-	private int retries = DEFAULT_RETRY_COUNT;
+	private AtomicInteger retries = new AtomicInteger(DEFAULT_RETRY_COUNT);
 
 	private PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
 
@@ -151,7 +152,7 @@ public class PoolingHttpClient {
 	public HttpResponse execute(HttpUriRequest request) throws IOException {
 		HttpResponse response;
 
-		int tries = ++retries;
+		int tries = retries.addAndGet(1);
 		while (true) {
 			tries--;
 			try {
@@ -227,12 +228,12 @@ public class PoolingHttpClient {
 	}
 
 	public int getRetryCount() {
-		return retries;
+		return retries.get();
 	}
 
 	public void setRetryCount(int retries) {
 		checkArgument(retries >= 0);
-		this.retries = retries;
+		this.retries = new AtomicInteger(retries);
 	}
 
 	public static class IdleConnectionMonitorThread extends Thread {
